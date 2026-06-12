@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BayesTrader — 策略邏輯概覽</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.7;
+        }
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            background: #fff;
+            padding: 40px 48px;
+            border-radius: 8px;
+            box-shadow: 0 0 16px rgba(0,0,0,0.1);
+        }
+        /* ── 頂部導覽 ── */
+        .nav-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 36px;
+        }
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 18px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .nav-btn-back {
+            background: #e8f0fe;
+            color: #1a73e8;
+            border: 1.5px solid #1a73e8;
+        }
+        .nav-btn-back:hover { background: #d2e3fc; }
+
+        /* ── 標題 ── */
+        h1 {
+            font-size: 28px;
+            color: #1a73e8;
+            margin-bottom: 6px;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 36px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 16px;
+        }
+
+        /* ── 章節 ── */
+        h2 {
+            font-size: 18px;
+            color: #444;
+            margin: 36px 0 12px;
+            border-left: 4px solid #1a73e8;
+            padding-left: 12px;
+        }
+        h3 {
+            font-size: 15px;
+            color: #555;
+            margin: 20px 0 8px;
+        }
+        p { margin: 8px 0; color: #444; }
+
+        /* ── 卡片式摘要 ── */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin: 16px 0;
+        }
+        .card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 16px 14px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+        .card-label { font-size: 12px; color: #888; margin-bottom: 6px; }
+        .card-value { font-size: 20px; font-weight: 700; color: #333; }
+
+        /* ── 步驟流程 ── */
+        .flow {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            margin: 16px 0;
+        }
+        .flow-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+        .flow-line {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .flow-dot {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: #1a73e8;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .flow-connector {
+            width: 2px;
+            flex: 1;
+            min-height: 18px;
+            background: #c5d9fb;
+        }
+        .flow-content {
+            padding: 2px 0 18px;
+            flex: 1;
+        }
+        .flow-content strong { color: #1a73e8; }
+
+        /* ── 表格 ── */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+            font-size: 14px;
+        }
+        th {
+            background: #f0f4ff;
+            color: #333;
+            padding: 10px 12px;
+            text-align: left;
+            border: 1px solid #dde3f0;
+        }
+        td {
+            padding: 9px 12px;
+            border: 1px solid #e9ecef;
+            color: #555;
+        }
+        tr:nth-child(even) td { background: #fafbff; }
+
+        /* ── code block ── */
+        .code-block {
+            background: #1e1e2e;
+            color: #cdd6f4;
+            border-radius: 8px;
+            padding: 18px 22px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-x: auto;
+            margin: 14px 0;
+        }
+        .code-block .kw { color: #89b4fa; }
+        .code-block .cm { color: #6c7086; font-style: italic; }
+        .code-block .val { color: #a6e3a1; }
+        .code-block .op { color: #f38ba8; }
+
+        /* ── 強調框 ── */
+        .info-box {
+            background: #e8f4fd;
+            border-left: 4px solid #1a73e8;
+            border-radius: 0 6px 6px 0;
+            padding: 12px 16px;
+            margin: 14px 0;
+            font-size: 14px;
+            color: #1a5276;
+        }
+        .warn-box {
+            background: #fff8e1;
+            border-left: 4px solid #f9a825;
+            border-radius: 0 6px 6px 0;
+            padding: 12px 16px;
+            margin: 14px 0;
+            font-size: 14px;
+            color: #7d5a00;
+        }
+
+        /* ── footer ── */
+        .footer {
+            margin-top: 48px;
+            padding-top: 16px;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #aaa;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- 導覽 -->
+    <div class="nav-bar">
+        <a class="nav-btn nav-btn-back" href="index.html">← 回到回測報告</a>
+    </div>
+
+    <!-- 標題 -->
+    <h1>BayesTrader — 策略邏輯概覽</h1>
+    <div class="subtitle">適用標的：BTCUSDT 永續合約 ｜ 時間週期：6h K 線 ｜ 回測期間：2020-01 ~ 2026-06</div>
+
+    <!-- 核心思路 -->
+    <h2>核心思路</h2>
+    <p>
+        使用 <strong>貝葉斯機率</strong> 推斷多空方向，搭配 <strong>市場狀態（Regime）過濾</strong> 避開熊市，
+        再以 <strong>動態移動止損</strong> 管理風險。三層模組相互獨立、串聯執行。
+    </p>
+    <div class="card-grid">
+        <div class="card">
+            <div class="card-label">初始資金</div>
+            <div class="card-value">$10,000</div>
+        </div>
+        <div class="card">
+            <div class="card-label">最終資金</div>
+            <div class="card-value" style="color:#4CAF50">$1.29B</div>
+        </div>
+        <div class="card">
+            <div class="card-label">年化報酬</div>
+            <div class="card-value" style="color:#4CAF50">520%</div>
+        </div>
+        <div class="card">
+            <div class="card-label">夏普比率</div>
+            <div class="card-value">0.79</div>
+        </div>
+        <div class="card">
+            <div class="card-label">勝率</div>
+            <div class="card-value">46.3%</div>
+        </div>
+        <div class="card">
+            <div class="card-label">盈虧比</div>
+            <div class="card-value" style="color:#4CAF50">2.16</div>
+        </div>
+    </div>
+    <div class="info-box">
+        策略以低勝率（46%）搭配高盈虧比（2.16）運作——允許頻繁小虧，靠少數大趨勢行情累積收益。
+    </div>
+
+    <!-- 一、市場狀態偵測 -->
+    <h2>一、市場狀態偵測（Bull / Bear Regime）</h2>
+    <p>每根 K 線皆即時判斷當前市場狀態，熊市期間完全暫停開倉，持倉中若轉為熊市則立即平倉。</p>
+    <div class="code-block">
+<span class="cm"># 熊市條件（兩者同時成立）</span>
+<span class="kw">trend_bear</span>    = EMA_fast &lt; EMA_slow
+<span class="kw">momentum_bear</span> = 近 N 根累積報酬 &lt; <span class="val">0</span>
+
+regime = <span class="val">'bear'</span> <span class="kw">if</span> (trend_bear <span class="kw">and</span> momentum_bear) <span class="kw">else</span> <span class="val">'bull'</span>
+    </div>
+    <div class="warn-box">
+        EMA 只使用到當前 bar 為止的資料計算，避免前視偏差（Look-ahead Bias）。
+    </div>
+
+    <!-- 二、貝葉斯訊號 -->
+    <h2>二、貝葉斯進場訊號</h2>
+
+    <h3>2-1 似然概率（Likelihood）</h3>
+    <p>取最近 <strong>6 根 K 線</strong>，從兩個維度提取特徵：</p>
+    <table>
+        <tr>
+            <th>特徵</th><th>計算方式</th><th>權重</th>
+        </tr>
+        <tr>
+            <td>成交量方向比</td>
+            <td>上漲 K 線量 ÷ 總量</td>
+            <td><strong>0.6</strong></td>
+        </tr>
+        <tr>
+            <td>K 線實體比</td>
+            <td>上漲 K 線實體總和 ÷ 總實體</td>
+            <td><strong>0.4</strong></td>
+        </tr>
+    </table>
+    <p>加權後得多頭似然 <code>L_long</code>，空頭似然 <code>L_short = 1 − L_long</code>，並限制在 [0.1, 0.9]。</p>
+
+    <h3>2-2 先驗概率（Prior）— 自我更新</h3>
+    <p>初始多空各 0.5，<strong>每筆交易結束後動態調整</strong>：</p>
+    <ul style="margin: 8px 0 8px 20px; color:#444">
+        <li>各方向保留最近 <strong>2 筆</strong>歷史損益</li>
+        <li>勝率高的方向先驗偏高（最多偏離 ±0.47）</li>
+        <li>多空先驗之和標準化為 1</li>
+    </ul>
+
+    <h3>2-3 後驗概率與開倉判斷</h3>
+    <div class="code-block">
+posterior_long  = prior_long  × L_long   <span class="cm">（再正規化）</span>
+posterior_short = prior_short × L_short
+
+<span class="cm"># 牛市中三個條件同時成立才進場</span>
+<span class="kw">做多</span>: posterior_long  &gt; threshold  <span class="op">AND</span>  動量 &gt; 0  <span class="op">AND</span>  成交量 &gt; 均量
+<span class="kw">做空</span>: posterior_short &gt; threshold  <span class="op">AND</span>  動量 &lt; 0  <span class="op">AND</span>  成交量 &gt; 均量
+    </div>
+    <p><strong>動態門檻調整：</strong></p>
+    <table>
+        <tr><th>情況</th><th>門檻變化</th></tr>
+        <tr><td>高波動市況</td><td>+最多 0.1（降低誤觸率）</td></tr>
+        <tr><td>平穩震盪（斜率小 + 低波動）</td><td>額外 +0.04（避免假突破）</td></tr>
+        <tr><td>平穩且量能不足</td><td>再 +0.02</td></tr>
+    </table>
+
+    <!-- 三、動態移動止損 -->
+    <h2>三、動態移動止損（Trailing Stop）</h2>
+
+    <h3>3-1 初始止損</h3>
+    <div class="code-block">
+<span class="cm"># 槓桿愈高，止損距離愈緊</span>
+多倉止損 = 進場價 × (1 − stop_loss_pct <span class="op">/</span> leverage)
+空倉止損 = 進場價 × (1 + stop_loss_pct <span class="op">/</span> leverage)
+    </div>
+
+    <h3>3-2 移動更新邏輯（棘輪機制）</h3>
+    <p>持倉後每根 K 線皆更新止損，止損<strong>只往有利方向移動</strong>：</p>
+    <div class="code-block">
+<span class="cm"># 持倉時間愈長，exp_coef 愈小 → 止損空間拉寬</span>
+exp_coef = <span class="val">0.8</span> × exp(−<span class="val">0.001</span> × 已持倉K線數),  最小值 <span class="val">0.2</span>
+
+<span class="cm"># 止損回撤比例隨獲利幅度非線性成長</span>
+adjusted_stop_pct = base_stop_pct × (1 − exp(−exp_coef × 價格距進場比例))
+
+<span class="cm"># 棘輪：只更新對持倉方向有利的方向</span>
+多倉新止損 = cur_price × (1 − adjusted_stop_pct)  → 只在「高於現有止損」時更新
+空倉新止損 = cur_price × (1 + adjusted_stop_pct)  → 只在「低於現有止損」時更新
+    </div>
+    <div class="info-box">
+        早期持倉止損跟得緊（exp_coef ≈ 0.8）；持倉時間拉長後止損拉開，保留大趨勢的獲利空間。
+    </div>
+
+    <!-- 四、出場條件 -->
+    <h2>四、出場條件</h2>
+    <table>
+        <tr><th>觸發原因</th><th>說明</th></tr>
+        <tr>
+            <td>移動止損被穿破</td>
+            <td>收盤價 ≤ 止損線（多倉）或 ≥ 止損線（空倉）</td>
+        </tr>
+        <tr>
+            <td>市場轉為熊市</td>
+            <td>當前 K 線判斷為 bear，立即平倉，不等止損觸發</td>
+        </tr>
+    </table>
+
+    <!-- 五、策略流程 -->
+    <h2>五、策略執行流程</h2>
+    <div class="flow">
+        <div class="flow-step">
+            <div class="flow-line">
+                <div class="flow-dot">1</div>
+                <div class="flow-connector"></div>
+            </div>
+            <div class="flow-content"><strong>Regime 偵測</strong>：計算 EMA 快慢線 + 近期動量，判斷牛 / 熊市</div>
+        </div>
+        <div class="flow-step">
+            <div class="flow-line">
+                <div class="flow-dot">2</div>
+                <div class="flow-connector"></div>
+            </div>
+            <div class="flow-content"><strong>持倉檢查</strong>：熊市或止損觸發 → 平倉並更新先驗概率</div>
+        </div>
+        <div class="flow-step">
+            <div class="flow-line">
+                <div class="flow-dot">3</div>
+                <div class="flow-connector"></div>
+            </div>
+            <div class="flow-content"><strong>止損更新</strong>：若持倉中且未平倉，更新移動止損至最新位置</div>
+        </div>
+        <div class="flow-step">
+            <div class="flow-line">
+                <div class="flow-dot">4</div>
+                <div class="flow-connector"></div>
+            </div>
+            <div class="flow-content"><strong>進場判斷</strong>（未持倉）：貝葉斯後驗 + 動量 + 量能 → 達標 → 開多 / 開空</div>
+        </div>
+        <div class="flow-step">
+            <div class="flow-line">
+                <div class="flow-dot">5</div>
+            </div>
+            <div class="flow-content"><strong>重複下一根 K 線</strong></div>
+        </div>
+    </div>
+
+    <!-- 六、參數優化 -->
+    <h2>六、參數優化方法</h2>
+    <p>主要超參數透過 <strong>Bayesian Optimization + Walk-Forward 驗證</strong> 搜尋，優化目標為樣本內夏普比率，以樣本外報酬驗證不過擬合。</p>
+    <table>
+        <tr><th>參數</th><th>說明</th></tr>
+        <tr><td>stop_loss_pct</td><td>初始止損幅度</td></tr>
+        <tr><td>update_stop_price_pct</td><td>移動止損基礎回撤比</td></tr>
+        <tr><td>base_threshold</td><td>後驗概率入場門檻</td></tr>
+        <tr><td>likelihood_lookback</td><td>動量視窗（K 線數）</td></tr>
+        <tr><td>regime_fast / slow</td><td>牛熊 EMA 快慢週期</td></tr>
+        <tr><td>regime_ret_lookback</td><td>牛熊動量回看期數</td></tr>
+    </table>
+
+    <div class="footer">BayesTrader Strategy Overview &nbsp;·&nbsp; BTCUSDT 6h &nbsp;·&nbsp; 2020–2026</div>
+</div>
+</body>
+</html>
